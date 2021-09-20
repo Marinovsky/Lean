@@ -28,9 +28,10 @@ namespace QuantConnect.Securities.IndexOption
             string quoteCurrency,
             decimal contractMultiplier,
             decimal pipSize,
-            decimal lotSize
+            decimal lotSize,
+            decimal minimumOrderSize = 1
             )
-            : base(description, quoteCurrency, contractMultiplier, pipSize, lotSize)
+            : base(description, quoteCurrency, contractMultiplier, pipSize, lotSize, minimumOrderSize)
         {
         }
 

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * QUANTCONNECT.COM - Democratizing Finance, Empowering Individuals.
  * Lean Algorithmic Trading Engine v2.0. Copyright 2014 QuantConnect Corporation.
  *
@@ -42,8 +42,8 @@ namespace QuantConnect.Securities.Option
         /// <summary>
         /// Creates an instance of the <see cref="OptionSymbolProperties"/> class
         /// </summary>
-        public OptionSymbolProperties(string description, string quoteCurrency, decimal contractMultiplier, decimal pipSize, decimal lotSize)
-            : base(description, quoteCurrency, contractMultiplier, pipSize, lotSize, string.Empty)
+        public OptionSymbolProperties(string description, string quoteCurrency, decimal contractMultiplier, decimal pipSize, decimal lotSize, decimal minimumOrderSize = 1)
+            : base(description, quoteCurrency, contractMultiplier, pipSize, lotSize, string.Empty, minimumOrderSize)
         {
             ContractUnitOfTrade = (int)contractMultiplier;
         }
@@ -57,7 +57,8 @@ namespace QuantConnect.Securities.Option
                  properties.ContractMultiplier,
                  properties.MinimumPriceVariation,
                  properties.LotSize,
-                 properties.MarketTicker)
+                 properties.MarketTicker,
+                 properties.MinimumOrderSize)
         {
             ContractUnitOfTrade = (int)properties.ContractMultiplier;
         }
