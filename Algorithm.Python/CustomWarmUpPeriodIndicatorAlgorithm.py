@@ -32,14 +32,19 @@ class CustomWarmUpPeriodIndicatorAlgorithm(QCAlgorithm):
         # - customNotWarmUp does not define WarmUpPeriod parameter
         # - customWarmUp defines WarmUpPeriod parameter
         # - customNotInherit defines WarmUpPeriod parameter but does not inherit from PythonIndicator class
+        # - csharpIndicator defines WarmUpPeriod because represents an indicator in CSharp
+        # The purpose of this last indicator is only to check other indicators allows to be warmed up
+
         self.customNotWarmUp = CSMANotWarmUp('customNotWarmUp', 60)
         self.customWarmUp = CSMAWithWarmUp('customWarmUp', 60)
         self.customNotInherit = CustomSMA('customNotInherit', 60)
+        self.csharpIndicator = SimpleMovingAverage('csharpIndicator' ,60)
 
         # Register the daily data of "SPY" to automatically update the indicators
         self.RegisterIndicator("SPY", self.customWarmUp, Resolution.Minute)
         self.RegisterIndicator("SPY", self.customNotWarmUp, Resolution.Minute)
         self.RegisterIndicator("SPY", self.customNotInherit, Resolution.Minute)
+        self.RegisterIndicator("SPY", self.csharpIndicator, Resolution.Minute)
 
         # Warm up customWarmUp indicator
         self.WarmUpIndicator("SPY", self.customWarmUp, Resolution.Minute)
@@ -63,6 +68,15 @@ class CustomWarmUpPeriodIndicatorAlgorithm(QCAlgorithm):
         # Check customNotInherit indicator has already been warmed up with the requested data
         assert(self.customNotInherit.IsReady), "customNotInherit indicator was expected to be ready"
         assert(self.customNotInherit.Samples == 60), "customNotInherit indicator was expected to have processed 60 datapoints already"
+
+        # Warm up csharpIndicator
+        self.WarmUpIndicator("SPY", self.csharpIndicator, Resolution.Minute)
+        assert(self.csharpIndicator.IsReady), "csharpIndicator indicator was expected to be ready"
+        assert(self.csharpIndicator.Samples == 60), "csharpIndicator indicator was expected to have processed 60 datapoints already"
+
+        # Check csharpIndicator indicator has already been warmed up with the requested data
+        assert(self.csharpIndicator.IsReady), "csharpIndicator indicator was expected to be ready"
+        assert(self.csharpIndicator.Samples == 60), "csharpIndicator indicator was expected to have processed 60 datapoints already"
 
     def OnData(self, data):
         if not self.Portfolio.Invested:

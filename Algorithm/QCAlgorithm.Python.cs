@@ -626,6 +626,26 @@ namespace QuantConnect.Algorithm
         /// <param name="resolution">The resolution</param>
         public void WarmUpIndicator(Symbol symbol, PyObject indicator, Resolution? resolution = null)
         {
+            IndicatorBase<IndicatorDataPoint> indicatorDataPoint;
+            IndicatorBase<IBaseDataBar> indicatorDataBar;
+            IndicatorBase<TradeBar> indicatorTradeBar;
+
+            if (indicator.TryConvert(out indicatorDataPoint))
+            {
+                WarmUpIndicator(symbol, indicatorDataPoint, resolution);
+                return;
+            }
+            else if (indicator.TryConvert(out indicatorDataBar))
+            {
+                WarmUpIndicator(symbol, indicatorDataBar, resolution);
+                return;
+            }
+            else if (indicator.TryConvert(out indicatorTradeBar))
+            {
+                WarmUpIndicator(symbol, indicatorTradeBar, resolution);
+                return;
+            }
+
             WarmUpIndicator(symbol, WrapPythonIndicator(indicator), resolution);
         }
 
@@ -1271,6 +1291,33 @@ namespace QuantConnect.Algorithm
             }
 
             return pythonIndicator;
+        }
+
+        /// <summary>
+        /// Helper method to apply conversions in python indicators
+        /// </summary>
+        /// <param name="indicator">The indicator to convert</param>
+        /// <returns>The given indicator converted</returns>
+        private dynamic TryConvertToManager(PyObject indicator)
+        {
+            IndicatorBase<IndicatorDataPoint> indicatorDataPoint;
+            IndicatorBase<IBaseDataBar> indicatorDataBar;
+            IndicatorBase<TradeBar> indicatorTradeBar;
+
+            if (indicator.TryConvert(out indicatorDataPoint))
+            {
+                return indicatorDataPoint;
+            }
+            else if (indicator.TryConvert(out indicatorDataBar))
+            {
+                return indicatorDataBar;
+            }
+            else if (indicator.TryConvert(out indicatorTradeBar))
+            {
+                return indicatorTradeBar;
+            }
+
+            return WrapPythonIndicator(indicator);
         }
     }
 }

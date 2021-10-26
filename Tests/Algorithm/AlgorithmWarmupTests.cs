@@ -1,4 +1,4 @@
-﻿/*
+/*
  * QUANTCONNECT.COM - Democratizing Finance, Empowering Individuals.
  * Lean Algorithmic Trading Engine v2.0. Copyright 2014 QuantConnect Corporation.
  *
@@ -23,6 +23,7 @@ using QuantConnect.Data;
 using QuantConnect.Interfaces;
 using QuantConnect.Logging;
 using QuantConnect.Packets;
+using Python.Runtime;
 
 namespace QuantConnect.Tests.Algorithm
 {
@@ -165,6 +166,39 @@ namespace QuantConnect.Tests.Algorithm
                         SetHoldings(_symbol, 1);
                     }
                 }
+            }
+        }
+
+        [TestCase("SimpleMovingAverage('SPY', 10)")]
+        [TestCase("AverageTrueRange('SPY', 10)")]
+        public void WarmsUpIndicatorProperlyPythonScript(string indicator)
+        {
+            string code = @"
+from AlgorithmImports import *
+
+AddReference('QuantConnect.Lean.Engine')
+from QuantConnect.Lean.Engine.DataFeeds import *
+
+algo = QCAlgorithm()
+
+marketHoursDatabase = MarketHoursDatabase.FromDataFolder()
+symbolPropertiesDatabase = SymbolPropertiesDatabase.FromDataFolder()
+securityService =  SecurityService(algo.Portfolio.CashBook, marketHoursDatabase, symbolPropertiesDatabase, algo, RegisteredSecurityDataTypesProvider.Null, SecurityCacheProvider(algo.Portfolio))
+algo.Securities.SetSecurityService(securityService)
+dataPermissionManager = DataPermissionManager()
+dataManager = DataManager(None, UniverseSelection(algo, securityService, dataPermissionManager, None), algo, algo.TimeKeeper, marketHoursDatabase, False, RegisteredSecurityDataTypesProvider.Null, dataPermissionManager)
+algo.SubscriptionManager.SetDataManager(dataManager)
+
+algo.SetStartDate(2021, 3, 26)
+spy = algo.AddEquity('SPY', Resolution.Minute)
+indicator = " + indicator +
+@"
+algo.RegisterIndicator(spy.Symbol, indicator, Resolution.Minute)
+algo.WarmUpIndicator(spy.Symbol, indicator, Resolution.Minute)";
+
+            using (Py.GIL())
+            {
+                Assert.DoesNotThrow(() => PythonEngine.ModuleFromString("WarmsUpIndicatorProperlyPythonScript", code));
             }
         }
     }
