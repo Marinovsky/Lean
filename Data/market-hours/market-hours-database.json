@@ -37260,7 +37260,7 @@
       "dataTimeZone": "America/New_York",
       "exchangeTimeZone": "America/Chicago",
       "sunday": [
-		{
+		    {
           "start": "20:15:00",
           "end": "1.00:00:00",
           "state": "market"
@@ -37277,14 +37277,14 @@
           "end": "16:15:00",
           "state": "market"
         },
-		{
+		    {
           "start": "20:15:00",
           "end": "1.00:00:00",
           "state": "market"
         }
       ],
       "tuesday": [
-		{
+		    {
           "start": "00:00:00",
           "end": "09:15:00",
           "state": "market"
@@ -37294,7 +37294,7 @@
           "end": "16:15:00",
           "state": "market"
         },
-		{
+		    {
           "start": "20:15:00",
           "end": "1.00:00:00",
           "state": "market"
@@ -37311,7 +37311,7 @@
           "end": "16:15:00",
           "state": "market"
         },
-		{
+		    {
           "start": "20:15:00",
           "end": "1.00:00:00",
           "state": "market"
@@ -37328,7 +37328,7 @@
           "end": "16:15:00",
           "state": "market"
         },
-		{
+		    {
           "start": "20:15:00",
           "end": "1.00:00:00",
           "state": "market"
@@ -37353,7 +37353,7 @@
       "dataTimeZone": "America/New_York",
       "exchangeTimeZone": "America/Chicago",
       "sunday": [
-		{
+		    {
           "start": "20:15:00",
           "end": "1.00:00:00",
           "state": "market"
@@ -37370,14 +37370,14 @@
           "end": "16:15:00",
           "state": "market"
         },
-		{
+		    {
           "start": "20:15:00",
           "end": "1.00:00:00",
           "state": "market"
         }
       ],
       "tuesday": [
-		{
+		    {
           "start": "00:00:00",
           "end": "09:15:00",
           "state": "market"
@@ -37387,7 +37387,7 @@
           "end": "16:15:00",
           "state": "market"
         },
-		{
+		    {
           "start": "20:15:00",
           "end": "1.00:00:00",
           "state": "market"
@@ -37404,7 +37404,7 @@
           "end": "16:15:00",
           "state": "market"
         },
-		{
+		    {
           "start": "20:15:00",
           "end": "1.00:00:00",
           "state": "market"
@@ -37421,7 +37421,7 @@
           "end": "16:15:00",
           "state": "market"
         },
-		{
+		    {
           "start": "20:15:00",
           "end": "1.00:00:00",
           "state": "market"
