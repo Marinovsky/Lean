@@ -37214,7 +37214,7 @@
       "saturday": [],
       "holidays": []
     },
-	"Index-cboe-[*]": {
+	  "Index-cboe-[*]": {
       "dataTimeZone": "America/New_York",
       "exchangeTimeZone": "America/Chicago",
       "sunday": [],
@@ -37256,7 +37256,7 @@
       "saturday": [],
       "holidays": []
     },
-	"Index-cboe-VIX": {
+	  "Index-cboe-VIX": {
       "dataTimeZone": "America/New_York",
       "exchangeTimeZone": "America/Chicago",
       "sunday": [
@@ -37347,9 +37347,9 @@
         }
       ],
       "saturday": [],
-	  "holidays": []
+	    "holidays": []
     },
-	"Index-cboe-SPX": {
+	  "Index-cboe-SPX": {
       "dataTimeZone": "America/New_York",
       "exchangeTimeZone": "America/Chicago",
       "sunday": [
@@ -37440,7 +37440,7 @@
         }
       ],
       "saturday": [],
-	  "holidays": []
+	    "holidays": []
     },
     "IndexOption-usa-[*]": {
       "dataTimeZone": "America/Chicago",
