@@ -121,8 +121,9 @@ namespace QuantConnect.Securities.Option
                 : exchangeHours.GetPreviousTradingDay(symbol.ID.Date);
 
             var expiryTime = exchangeHours.GetNextMarketClose(expiryDay, false);
+            Logging.Log.Debug($"currenTime >= expiryTime : {currentTime} >= {expiryTime} : {currentTime >= expiryTime}");
 
-            return currentTime >= expiryTime;
+            return currentTime.Date >= expiryTime.Date;
         }
 
     }

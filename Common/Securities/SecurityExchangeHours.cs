@@ -226,6 +226,8 @@ namespace QuantConnect.Securities
         {
             var time = localDateTime;
             var oneWeekLater = localDateTime.Date.AddDays(15);
+            DateTime? oneDayBefore = null;
+            TimeSpan? lastSegment = null;
             do
             {
                 var marketHours = GetMarketHours(time.DayOfWeek);
@@ -240,6 +242,7 @@ namespace QuantConnect.Securities
                         if (time < lateOpenDateTime)
                             return lateOpenDateTime;
 
+                        oneDayBefore = time;
                         time = time.Date + Time.OneDay;
                         continue;
                     }
@@ -251,6 +254,7 @@ namespace QuantConnect.Securities
                         isEarlyCloseDay = true;
                         if (time > earlyCloseDateTime)
                         {
+                            oneDayBefore = time;
                             time = time.Date + Time.OneDay;
                             continue;
                         }
@@ -260,12 +264,14 @@ namespace QuantConnect.Securities
                     // is the first segment in the day so in order to see if it's part of the last market
                     // open we need to compare with the last day last segment. Otherwise, it will be replaced
                     // in GetMarketOpen() by the last segment in the same day prior to the next market open
-                    var oneDayBefore = time.Date.AddDays(-1);
-                    var oneDayBeforeMarketHours = GetMarketHours(oneDayBefore.DayOfWeek);
+                    if (oneDayBefore == null)
+                    {
+                        oneDayBefore = time.Date.AddDays(-1);
+                    }
+                    var oneDayBeforeMarketHours = GetMarketHours(oneDayBefore.Value.DayOfWeek);
                     TimeSpan lastEarlyCloseTime;
-                    var wasEarlyClose = _earlyCloses.TryGetValue(oneDayBefore.Date, out lastEarlyCloseTime);
-                    var wasAHoliday = _holidays.Contains(oneDayBefore.Date.Ticks);
-                    TimeSpan? lastSegment = oneDayBeforeMarketHours.Segments.Any() && !wasEarlyClose && !wasAHoliday ?
+                    var wasEarlyClose = _earlyCloses.TryGetValue(oneDayBefore.Value.Date, out lastEarlyCloseTime);
+                    lastSegment = oneDayBeforeMarketHours.Segments.Any() && !wasEarlyClose ?
                         oneDayBeforeMarketHours.Segments.Last().End : null;
 
                     var marketOpenTimeOfDay = marketHours.GetMarketOpen(time.TimeOfDay, extendedMarket, lastSegment);
@@ -278,6 +284,7 @@ namespace QuantConnect.Securities
                         {
                             if (earlyCloseDateTime < marketOpen)
                             {
+                                oneDayBefore = time;
                                 time = time.Date + Time.OneDay;
                                 continue;
                             }
@@ -290,6 +297,7 @@ namespace QuantConnect.Securities
                     }
                 }
 
+                oneDayBefore = time;
                 time = time.Date + Time.OneDay;
             }
             while (time < oneWeekLater);
@@ -334,12 +342,24 @@ namespace QuantConnect.Securities
                         }
                     }
 
-                    var marketCloseTimeOfDay = marketHours.GetMarketClose(time.TimeOfDay, extendedMarket);
+                    // Get next day first segment. This is made because we need to check the segment returned
+                    // by GetMarketClose() ends at segment.End and not continues in the next segment. We get
+                    // the next day first segment for the case in which the next market close is the last segment
+                    // of the current day
+                    var oneDayAfter = time.Date.AddDays(1);
+                    var oneDayAfterMarketHours = GetMarketHours(oneDayAfter.DayOfWeek);
+                    TimeSpan nextEarlyCloseTime;
+                    var isNextDayAnEarlyClose = _earlyCloses.TryGetValue(oneDayAfter.Date, out nextEarlyCloseTime);                    
+                    TimeSpan? nextSegment = oneDayAfterMarketHours.Segments.Any() && !isNextDayAnEarlyClose ?
+                        oneDayAfterMarketHours.Segments.First().Start : null;
+
+                    var marketCloseTimeOfDay = marketHours.GetMarketClose(time.TimeOfDay, extendedMarket, nextSegment);
                     if (marketCloseTimeOfDay.HasValue)
                     {
                         var marketClose = time.Date + marketCloseTimeOfDay.Value;
                         if (localDateTime < marketClose)
                         {
+                            Logging.Log.Debug($"localDateTime {localDateTime} time {time} marketClose {marketClose}");
                             return marketClose;
                         }
                     }
