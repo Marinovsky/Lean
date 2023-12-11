@@ -29,6 +29,7 @@ using System.Linq;
 using QuantConnect.Brokerages;
 using QuantConnect.Scheduling;
 using QuantConnect.Util;
+using QuantConnect.Statistics;
 
 namespace QuantConnect.Algorithm
 {
@@ -1156,6 +1157,21 @@ namespace QuantConnect.Algorithm
         public void SetRiskFreeInterestRateModel(PyObject model)
         {
             SetRiskFreeInterestRateModel(RiskFreeInterestRateModelPythonWrapper.FromPyObject(model));
+        }
+
+        /// <summary>
+        /// Sets the statistics service
+        /// </summary>
+        /// <param name="pyObject">The option exercise model to use</param>
+        public void SetStatisticsService(PyObject pyObject)
+        {
+            if (pyObject.TryConvert<IStatisticsService>(out var statisticsService))
+            {
+                // pure C# implementation
+                SetStatisticsService(statisticsService);
+            }
+
+            SetStatisticsService(new IStatisticsServicePythonWrapper(pyObject));
         }
 
         /// <summary>
