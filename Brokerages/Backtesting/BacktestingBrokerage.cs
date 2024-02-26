@@ -469,13 +469,22 @@ namespace QuantConnect.Brokerages.Backtesting
                         var request = new SubmitOrderRequest(OrderType.OptionExercise, option.Type, option.Symbol, Math.Abs(result.Quantity), 0m, 0m, 0m, Algorithm.UtcTime, result.Tag);
                         if (!_pendingOptionAssignments.Add(option.Symbol))
                         {
-                            throw new InvalidOperationException($"Duplicate option exercise order request for symbol {option.Symbol}. Please contact support");
                             var relatedSecurities = Algorithm.Securities.Total.
                                 Where(security => security.Symbol.SecurityType.IsOption() && ((Option)security).Underlying == option.Underlying).Append(option.Underlying);
-                            foreach(var relatedSecurity in relatedSecurities)
+                            foreach (var relatedSecurity in relatedSecurities)
                             {
-                                Log.Trace($"BacktestingBrokerage.ProcessAssignmentOrders(): Symbol: {relatedSecurity.Symbol}| Holdings: {relatedSecurity.Holdings} | Tradable Status: {relatedSecurity.IsTradable} | Is Delisted: {relatedSecurity.IsDelisted} | Algorithm Time: {Algorithm.Time}");
+                                Log.Trace($"BacktestingBrokerage.ProcessAssignmentOrders(): Symbol: {relatedSecurity.Symbol} | Holdings: {relatedSecurity.Holdings} | Tradable Status: {relatedSecurity.IsTradable} | Is Delisted: {relatedSecurity.IsDelisted} | Algorithm Time: {Algorithm.Time}");
                             }
+
+                            var relatedOrders = Algorithm.Transactions.GetOrders(order =>
+                            order.Symbol == option.Symbol ||
+                            order.Symbol == option.Underlying.Symbol ||
+                            (order.Symbol.SecurityType.IsOption() && order.Symbol.Underlying == option.Underlying.Symbol));
+                            foreach (var relatedOrder in relatedOrders)
+                            {
+                                Log.Trace($"BacktestingBrokerage.ProcessAssignmentOrders(): Order ID: {relatedOrder.Id} | Order Symbol: {relatedOrder.Symbol} | Order Status: {relatedOrder.Status} | Order Price: {relatedOrder.Price} | Order Quantity: {relatedOrder.Quantity} | Order Brokerage: {relatedOrder.BrokerId} | Order Time: {relatedOrder.Time}")
+                            }
+                            throw new InvalidOperationException($"Duplicate option exercise order request for symbol {option.Symbol}. Please contact support");
                         }
                         Algorithm.Transactions.ProcessRequest(request);
                     }
