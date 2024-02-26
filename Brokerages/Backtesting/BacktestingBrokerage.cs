@@ -470,6 +470,12 @@ namespace QuantConnect.Brokerages.Backtesting
                         if (!_pendingOptionAssignments.Add(option.Symbol))
                         {
                             throw new InvalidOperationException($"Duplicate option exercise order request for symbol {option.Symbol}. Please contact support");
+                            var relatedSecurities = Algorithm.Securities.Total.
+                                Where(security => security.Symbol.SecurityType.IsOption() && ((Option)security).Underlying == option.Underlying).Append(option.Underlying);
+                            foreach(var relatedSecurity in relatedSecurities)
+                            {
+                                Log.Trace($"BacktestingBrokerage.ProcessAssignmentOrders(): Symbol: {relatedSecurity.Symbol}| Holdings: {relatedSecurity.Holdings} | Tradable Status: {relatedSecurity.IsTradable} | Is Delisted: {relatedSecurity.IsDelisted} | Algorithm Time: {Algorithm.Time}");
+                            }
                         }
                         Algorithm.Transactions.ProcessRequest(request);
                     }
