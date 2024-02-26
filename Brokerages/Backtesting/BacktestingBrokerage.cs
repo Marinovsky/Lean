@@ -482,7 +482,7 @@ namespace QuantConnect.Brokerages.Backtesting
                             (order.Symbol.SecurityType.IsOption() && order.Symbol.Underlying == option.Underlying.Symbol));
                             foreach (var relatedOrder in relatedOrders)
                             {
-                                Log.Trace($"BacktestingBrokerage.ProcessAssignmentOrders(): Order ID: {relatedOrder.Id} | Order Symbol: {relatedOrder.Symbol} | Order Status: {relatedOrder.Status} | Order Price: {relatedOrder.Price} | Order Quantity: {relatedOrder.Quantity} | Order Brokerage: {relatedOrder.BrokerId} | Order Time: {relatedOrder.Time}")
+                                Log.Trace($"BacktestingBrokerage.ProcessAssignmentOrders(): Order {relatedOrder}");
                             }
                             throw new InvalidOperationException($"Duplicate option exercise order request for symbol {option.Symbol}. Please contact support");
                         }
