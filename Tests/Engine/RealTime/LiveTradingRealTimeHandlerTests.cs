@@ -389,6 +389,8 @@ namespace QuantConnect.Tests.Engine.RealTime
         {
             private int _securitiesUpdated;
 
+            private bool _isDisposed;
+
             public ManualTimeProvider PublicTimeProvider = new ManualTimeProvider();
 
             protected override ITimeProvider TimeProvider { get { return PublicTimeProvider; } }
@@ -398,12 +400,14 @@ namespace QuantConnect.Tests.Engine.RealTime
 
             protected override void RefreshSymbolProperties()
             {
+                if (_isDisposed) return;
                 base.RefreshSymbolProperties();
                 SpdbRefreshed.Set();
             }
 
             protected override void UpdateSymbolProperties(Security security)
             {
+                if (_isDisposed) return;
                 base.UpdateSymbolProperties(security);
                 Algorithm.Log($"{Algorithm.Securities.Count}");
 
@@ -418,6 +422,7 @@ namespace QuantConnect.Tests.Engine.RealTime
             {
                 SpdbRefreshed.Dispose();
                 SecuritySymbolPropertiesUpdated.Dispose();
+                _isDisposed = true;
             }
         }
 
