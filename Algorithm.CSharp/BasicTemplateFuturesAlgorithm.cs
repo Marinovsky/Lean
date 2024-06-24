@@ -106,7 +106,7 @@ namespace QuantConnect.Algorithm.CSharp
             }
             else
             {
-                Liquidate();
+                Liquidate(Securities.Keys.OrderBy(x => x.Value));
             }
         }
 

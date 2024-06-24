@@ -402,7 +402,7 @@ namespace QuantConnect.Algorithm.CSharp
         {
             if (symbol == Security.Symbol && Security.Invested)
             {
-                Liquidate();
+                Liquidate(Securities.Keys.OrderBy(x => x.Value));
             }
         }
 
