@@ -13,11 +13,14 @@
  * limitations under the License.
 */
 
-using QuantConnect.Brokerages;
 using QuantConnect.Data;
 using QuantConnect.Data.Market;
 using QuantConnect.Orders;
 using QuantConnect.Securities;
+using QuantConnect.Securities.Future;
+using QuantConnect.Securities.FutureOption;
+using QuantConnect.Securities.IndexOption;
+using QuantConnect.Securities.Option;
 using QuantConnect.Util;
 using System;
 using System.Collections.Generic;
@@ -30,98 +33,90 @@ namespace QuantConnect.Algorithm.CSharp
         private int _testCaseIndex;
         private bool _submittedMarketOnCloseToday;
         private DateTime _last = DateTime.MinValue;
-        private Symbol _canonicalOption;
-        private Symbol _canonicalIndexOption;
         private List<OrderType> _orderTypes;
         private Dictionary<OrderType, Action<Slice>> _orderTypeMethods;
-
-        protected virtual Symbol EquitySymbol { get; set; }
-        protected virtual Symbol OptionContract { get; set; }
-        protected virtual Symbol ForexSymbol { get; set; }
-        protected virtual Symbol FutureContract { get; set; }
-        protected virtual Symbol CfdSymbol { get; set; }
-        protected virtual Symbol CryptoSymbol { get; set; }
-        protected virtual Symbol FutureOptionContract { get; set; }
-        protected virtual Symbol IndexOptionContract { get; set; }
-        protected virtual Symbol CryptoFutureSymbol { get; set; }
-        protected virtual Dictionary<OrderType, List<Symbol>> SymbolToTestPerOrderType { get; set; }
-
-        protected int OpenOrdersTimeout { get; set; }
-        protected BrokerageName Brokerage { get; set; } = BrokerageName.Default;
-        protected Resolution Resolution { get; set; } = Resolution.Minute;
+        private bool _symbolsHaveBeenSetup;
+        private BaseBrokerageAlgorithmSettings _brokerageAlgorithmSettings;
+        private int _openOrdersTimeout;
 
         public override void Initialize()
         {
             SetStartDate(2024, 07, 20);
             SetEndDate(2024, 07, 29);
             SetCash(100000000);
+            SetCash("USDT", 10000);
 
-            SetBrokerageModel(Brokerage);
+            _brokerageAlgorithmSettings = new DefaultBrokerageAlgorithmSettings();
+            SetBrokerageModel(_brokerageAlgorithmSettings.BrokerageName);
             AddSymbols();
-            _orderTypes = SymbolToTestPerOrderType.Keys.ToList();
+
             _orderTypeMethods = new()
             {
                 { OrderType.Market, new Action<Slice>(slice => ExecuteMarketOrders()) },
-                { OrderType.Limit, new Action<Slice>((slice) => ExecuteLimitOrders()) },
-                { OrderType.StopMarket, new Action<Slice>((slice) => ExecuteStopMarketOrders()) },
-                { OrderType.StopLimit, new Action<Slice>((slice) => ExecuteStopLimitOrders()) },
-                { OrderType.MarketOnOpen, new Action<Slice>((slice) => ExecuteMarketOnOpenOrders()) },
-                { OrderType.MarketOnClose, new Action<Slice>((slice) => ExecuteMarketOnCloseOrders()) },
-                { OrderType.OptionExercise, new Action<Slice>((slice) => ExecuteOptionExerciseOrder()) },
-                { OrderType.LimitIfTouched, new Action<Slice>((slice) => ExecuteLimitIfTouchedOrders()) },
-                { OrderType.ComboMarket, new Action<Slice>((slice) => ExecuteComboMarketOrder(slice)) },
-                { OrderType.ComboLimit, new Action<Slice>((slice) => ExecuteComboLimitOrder(slice)) },
-                { OrderType.ComboLegLimit, new Action<Slice>((slice) => ExecuteComboLegLimitOrder(slice)) },
-                { OrderType.TrailingStop, new Action<Slice>((slice) => ExecuteTrailingStopOrders()) },
+                { OrderType.Limit, new Action<Slice>(slice => ExecuteLimitOrders()) },
+                { OrderType.StopMarket, new Action<Slice>(slice => ExecuteStopMarketOrders()) },
+                { OrderType.StopLimit, new Action<Slice>(slice => ExecuteStopLimitOrders()) },
+                { OrderType.MarketOnOpen, new Action<Slice>(slice => ExecuteMarketOnOpenOrders()) },
+                { OrderType.MarketOnClose, new Action<Slice>(slice => ExecuteMarketOnCloseOrders()) },
+                { OrderType.OptionExercise, new Action<Slice>(slice => ExecuteOptionExerciseOrder()) },
+                { OrderType.LimitIfTouched, new Action<Slice>(slice => ExecuteLimitIfTouchedOrders()) },
+                { OrderType.ComboMarket, new Action<Slice>(slice => ExecuteComboMarketOrder(slice)) },
+                { OrderType.ComboLimit, new Action<Slice>(slice => ExecuteComboLimitOrder(slice)) },
+                { OrderType.ComboLegLimit, new Action<Slice>(slice => ExecuteComboLegLimitOrder(slice)) },
+                { OrderType.TrailingStop, new Action<Slice>(slice => ExecuteTrailingStopOrders()) },
             };
         }
 
         protected virtual void AddSymbols()
         {
-            var defaultSecurityTypes = new List<Symbol>()
+            foreach(var symbol in _brokerageAlgorithmSettings.SecurityTypesToAdd)
             {
-                EquitySymbol,
-                OptionContract,
-                ForexSymbol,
-                FutureContract,
-                CfdSymbol,
-                CryptoSymbol,
-                FutureContract,
-                IndexOptionContract,
-                CryptoFutureSymbol,
-            };
+                if (symbol.Underlying?.SecurityType == SecurityType.Future)
+                {
+                    AddFutureOption(symbol.Underlying, _brokerageAlgorithmSettings.FutureOptionFilter);
+                    continue;
+                }
 
-            SymbolToTestPerOrderType = new Dictionary<OrderType, List<Symbol>>() {
-                { OrderType.Market, defaultSecurityTypes },
-                { OrderType.Limit, defaultSecurityTypes },
-                { OrderType.StopMarket, defaultSecurityTypes },
-                { OrderType.StopLimit, defaultSecurityTypes },
-                { OrderType.MarketOnOpen, defaultSecurityTypes.Where(x => x.SecurityType != SecurityType.Future && x.SecurityType != SecurityType.CryptoFuture).ToList() },
-                { OrderType.MarketOnClose, defaultSecurityTypes.Where(x => x.SecurityType != SecurityType.Future && x.SecurityType != SecurityType.CryptoFuture).ToList() },
-                { OrderType.OptionExercise, new List<Symbol>() { OptionContract, IndexOptionContract } },
-                { OrderType.LimitIfTouched, defaultSecurityTypes },
-                { OrderType.ComboMarket, new List<Symbol>() { OptionContract } },
-                { OrderType.ComboLimit, new List<Symbol>() { OptionContract } },
-                { OrderType.ComboLegLimit, new List<Symbol>() { OptionContract } },
-                { OrderType.TrailingStop, defaultSecurityTypes } 
-            };
+                var security = AddSecurity(symbol, _brokerageAlgorithmSettings.Resolution);
+                dynamic filter;
+                switch (symbol.SecurityType)
+                {
+                    case SecurityType.Option:
+                        filter = _brokerageAlgorithmSettings.OptionFilter;
+                        break;
+                    case SecurityType.Future:
+                        filter = _brokerageAlgorithmSettings.FutureFilter;
+                        break;
+                    case SecurityType.IndexOption:
+                        filter = _brokerageAlgorithmSettings.IndexOptionFilter;
+                        break;
+                    case SecurityType.FutureOption:
+                        filter = _brokerageAlgorithmSettings.FutureOptionFilter;
+                        break;
+                    default:
+                        filter = null;
+                        break;
+                }
 
-            EquitySymbol = AddEquity("AAPL", Resolution).Symbol;
-            ForexSymbol = AddForex("EURGBP", Resolution).Symbol;
-            CryptoSymbol = AddCrypto("BTCUSD", Resolution).Symbol;
-            CfdSymbol = AddCfd("XAUUSD", Resolution).Symbol;
-            CryptoFutureSymbol = AddCryptoFuture("BTCUSD", Resolution).Symbol;
-
-            var option = AddOption(EquitySymbol);
-            _canonicalOption = option.Symbol;
-            option.SetFilter(u => u.Strikes(-2, +2).Expiration(0, 60));
-
-            var spx = AddIndex("SPX", Resolution).Symbol;
-            var spxOptions = AddIndexOption(spx, Resolution);
-            _canonicalIndexOption = spxOptions.Symbol;
-
-            var future = AddFuture("ES", Resolution);
-            future.SetFilter(TimeSpan.Zero, TimeSpan.FromDays(182));
+                if (filter != null)
+                {
+                    switch (symbol.SecurityType)
+                    {
+                        case SecurityType.Option:
+                            (security as Option).SetFilter(filter);
+                            break;
+                        case SecurityType.Future:
+                            (security as Future).SetFilter(filter);
+                            break;
+                        case SecurityType.FutureOption:
+                            (security as FutureOption).SetFilter(filter);
+                            break;
+                        case SecurityType.IndexOption:
+                            (security as IndexOption).SetFilter(filter);
+                            break;
+                    }
+                }
+            }
         }
 
         public override void OnData(Slice slice)
@@ -144,9 +139,22 @@ namespace QuantConnect.Algorithm.CSharp
                 return;
             }
 
-            foreach (var symbol in Securities.Keys)
+            if (!SetFutureOptionContract(slice))
             {
-                if (Securities[symbol].Price == 0)
+                Debug($"{Time}: Waiting for future option contract to be set...");
+                return;
+            }
+
+            if (!_symbolsHaveBeenSetup)
+            {
+                _brokerageAlgorithmSettings.InitializeSymbols();
+                _orderTypes = _brokerageAlgorithmSettings.SymbolToTestPerOrderType.Keys.ToList();
+                _symbolsHaveBeenSetup = true;
+            }
+
+            foreach (var symbol in _brokerageAlgorithmSettings.SecurityTypes)
+            {
+                if (!symbol.IsCanonical() && Securities[symbol].Price == 0)
                 {
                     Debug($"{Time}: Waiting for {symbol} to have price...");
                     return;
@@ -158,7 +166,31 @@ namespace QuantConnect.Algorithm.CSharp
             _testCaseIndex++;
             if (_testCaseIndex == _orderTypes.Count)
             {
+                AssertHistory();
                 Quit();
+            }
+        }
+
+        protected virtual void AssertHistory()
+        {
+            IEnumerable<IBaseData> history = default;
+            foreach (var symbol in _brokerageAlgorithmSettings.SecurityTypes)
+            {
+                foreach(var resolution in _brokerageAlgorithmSettings.ResolutionsPerSecurity[symbol.SecurityType])
+                {
+                    foreach(var type in _brokerageAlgorithmSettings.DataTypesPerSecurity[symbol.SecurityType])
+                    {
+                        Debug($"{type.Name} history request for symbol {symbol} at {resolution} resolution ");
+                        if (type == typeof(QuoteBar))
+                        {
+                            history = History<QuoteBar>(symbol, TimeSpan.FromDays(10), resolution).ToList();
+                        }
+                        else if (type == typeof(TradeBar))
+                        {
+                            history = History<TradeBar>(symbol, TimeSpan.FromDays(10), resolution).ToList();
+                        }
+                    }
+                }
             }
         }
 
@@ -187,61 +219,88 @@ namespace QuantConnect.Algorithm.CSharp
 
         protected virtual bool SetFutureContract(Slice slice)
         {
-            if (FutureContract == null)
+            if (_brokerageAlgorithmSettings.CanonicalFutureSymbol != null && _brokerageAlgorithmSettings.FutureContract == null)
             {
                 foreach (var chain in slice.FutureChains.Values)
                 {
                     var contract = (from futuresContract in chain.OrderBy(x => x.Expiry)
-                                    where futuresContract.Expiry > Time.Date.AddDays(90)
+                                    where futuresContract.Expiry > Time.Date.AddDays(29)
                                     select futuresContract
                     ).FirstOrDefault();
-                    FutureContract = contract.Symbol;
+                    if (contract != null)
+                    {
+                        _brokerageAlgorithmSettings.FutureContract = contract.Symbol;
+                        break;
+                    }
                 }
             }
-            return FutureContract != null;
+            return _brokerageAlgorithmSettings.FutureContract != null;
         }
 
         protected virtual bool SetOptionContract(Slice slice)
         {
-            if (OptionContract == null)
+            if (_brokerageAlgorithmSettings.CanonicalOptionSymbol != null && _brokerageAlgorithmSettings.OptionContract == null)
             {
                 foreach (var optionChain in slice.OptionChains.Values)
                 {
                     var atmContract = optionChain
-                        .Where(x => x.Symbol.Canonical == _canonicalOption)
-                        .OrderByDescending(x => x.Expiry)
-                        .ThenBy(x => Math.Abs(optionChain.Underlying.Price - x.Strike))
-                        .ThenByDescending(x => x.Right)
-                        .FirstOrDefault();
-                    OptionContract = atmContract.Symbol;
-                }
-            }
-            return OptionContract != null;
-        }
-
-        protected virtual bool SetIndexOptionContract(Slice slice)
-        {
-            if (IndexOptionContract == null)
-            {
-                foreach (var optionChain in slice.OptionChains.Values)
-                {
-                    var atmContract = optionChain
-                        .Where(x => x.Symbol.Canonical == _canonicalIndexOption)
+                        .Where(x => x.Symbol.Canonical == _brokerageAlgorithmSettings.CanonicalOptionSymbol)
                         .OrderByDescending(x => x.Expiry)
                         .ThenBy(x => Math.Abs(optionChain.Underlying.Price - x.Strike))
                         .ThenByDescending(x => x.Right)
                         .FirstOrDefault();
                     if (atmContract != null)
                     {
-                        IndexOptionContract = atmContract.Symbol;
-                    }
-                    else
-                    {
-                        return false;
+                        _brokerageAlgorithmSettings.OptionContract = atmContract.Symbol;
+                        break;
                     }
                 }
             }
-            return IndexOptionContract != null;
+            return _brokerageAlgorithmSettings.OptionContract != null;
+        }
+
+        protected virtual bool SetFutureOptionContract(Slice slice)
+        {
+            if (_brokerageAlgorithmSettings.CanonicalFutureOptionSymbol != null && _brokerageAlgorithmSettings.FutureOptionContract == null)
+            {
+                foreach (var optionChain in slice.OptionChains.Values)
+                {
+                    var atmContract = optionChain
+                        .Where(x => x.Symbol.SecurityType == SecurityType.FutureOption)
+                        .OrderByDescending(x => x.Expiry)
+                        .ThenBy(x => Math.Abs(optionChain.Underlying.Price - x.Strike))
+                        .ThenByDescending(x => x.Right)
+                        .FirstOrDefault();
+                    if (atmContract != null)
+                    {
+                        _brokerageAlgorithmSettings.FutureOptionContract = atmContract.Symbol;
+                        break;
+                    }
+                }
+            }
+            return _brokerageAlgorithmSettings.FutureOptionContract != null;
+        }
+
+        protected virtual bool SetIndexOptionContract(Slice slice)
+        {
+            if (_brokerageAlgorithmSettings.CanonicalIndexOptionSymbol != null && _brokerageAlgorithmSettings.IndexOptionContract == null)
+            {
+                foreach (var optionChain in slice.OptionChains.Values)
+                {
+                    var atmContract = optionChain
+                        .Where(x => x.Symbol.Canonical == _brokerageAlgorithmSettings.CanonicalIndexOptionSymbol)
+                        .OrderByDescending(x => x.Expiry)
+                        .ThenBy(x => Math.Abs(optionChain.Underlying.Price - x.Strike))
+                        .ThenByDescending(x => x.Right)
+                        .FirstOrDefault();
+                    if (atmContract != null)
+                    {
+                        _brokerageAlgorithmSettings.IndexOptionContract = atmContract.Symbol;
+                        break;
+                    }
+                }
+            }
+            return _brokerageAlgorithmSettings.IndexOptionContract != null;
         }
 
         protected virtual void ExecuteMarketOrders()
@@ -260,7 +319,7 @@ namespace QuantConnect.Algorithm.CSharp
             }
 
             Debug($"{Time}: Sending market orders");
-            foreach (var symbol in SymbolToTestPerOrderType[OrderType.Market])
+            foreach (var symbol in _brokerageAlgorithmSettings.SymbolToTestPerOrderType[OrderType.Market])
             {
                 MarketOrder(symbol, 1);
             }
@@ -269,7 +328,7 @@ namespace QuantConnect.Algorithm.CSharp
         protected virtual void ExecuteLimitOrders()
         {
             Debug($"{Time}: Sending limit orders");
-            foreach (var symbol in SymbolToTestPerOrderType[OrderType.Limit])
+            foreach (var symbol in _brokerageAlgorithmSettings.SymbolToTestPerOrderType[OrderType.Limit])
             {
                 // bellow market price so triggers asap
                 LimitOrder(symbol, -1, GetOrderPrice(symbol, aboveTheMarket: false));
@@ -287,7 +346,7 @@ namespace QuantConnect.Algorithm.CSharp
             }
 
             Debug($"{Time}: Sending StopMarketOrder orders");
-            foreach (var symbol in SymbolToTestPerOrderType[OrderType.StopMarket])
+            foreach (var symbol in _brokerageAlgorithmSettings.SymbolToTestPerOrderType[OrderType.StopMarket])
             {
                 // Buy Stop order is always placed above the current market price
                 StopMarketOrder(symbol, 1, GetOrderPrice(symbol, aboveTheMarket: true));
@@ -298,7 +357,7 @@ namespace QuantConnect.Algorithm.CSharp
         {
             if (Transactions.GetOpenOrders().Count > 0)
             {
-                if (OpenOrdersTimeout++ > 5)
+                if (_openOrdersTimeout++ > _brokerageAlgorithmSettings.OpenOrdersTimeout)
                 {
                     Debug($"{Time}: Tiemout waiting for orders to fill, cancelling");
                     Transactions.CancelOpenOrders();
@@ -312,7 +371,7 @@ namespace QuantConnect.Algorithm.CSharp
             }
 
             Debug($"{Time}: Sending StopLimitOrder orders");
-            foreach (var symbol in SymbolToTestPerOrderType[OrderType.StopLimit])
+            foreach (var symbol in _brokerageAlgorithmSettings.SymbolToTestPerOrderType[OrderType.StopLimit])
             {
                 var aboveTheMarket = GetOrderPrice(symbol, aboveTheMarket: false);
                 StopLimitOrder(symbol, -1, aboveTheMarket, aboveTheMarket);
@@ -324,7 +383,7 @@ namespace QuantConnect.Algorithm.CSharp
             if (Time.Date != _last.Date) // each morning submit a market on open order
             {
                 Debug($"{Time}: Sending MarketOnOpen orders");
-                foreach (var symbol in SymbolToTestPerOrderType[OrderType.MarketOnOpen])
+                foreach (var symbol in _brokerageAlgorithmSettings.SymbolToTestPerOrderType[OrderType.MarketOnOpen])
                 {
                     MarketOnOpenOrder(symbol, 1);
                 }
@@ -341,7 +400,7 @@ namespace QuantConnect.Algorithm.CSharp
                 _submittedMarketOnCloseToday = true;
                 _last = Time;
                 Debug($"{Time}: Sending MarketOnClose orders");
-                foreach (var symbol in SymbolToTestPerOrderType[OrderType.MarketOnClose])
+                foreach (var symbol in _brokerageAlgorithmSettings.SymbolToTestPerOrderType[OrderType.MarketOnClose])
                 {
                     if (Securities[symbol].Exchange.ExchangeOpen)
                     {
@@ -353,17 +412,17 @@ namespace QuantConnect.Algorithm.CSharp
 
         protected virtual void ExecuteOptionExerciseOrder()
         {
-            MarketOrder(OptionContract, 1);
+            MarketOrder(_brokerageAlgorithmSettings.OptionContract, 1);
 
             // Exercise option
             Debug($"{Time}: Exercising option contract");
-            ExerciseOption(OptionContract, 1);
+            ExerciseOption(_brokerageAlgorithmSettings.OptionContract, 1);
         }
 
         protected virtual void ExecuteLimitIfTouchedOrders()
         {
             Debug($"{Time}: Sending LimitIfTouched orders");
-            foreach (var symbol in SymbolToTestPerOrderType[OrderType.MarketOnClose])
+            foreach (var symbol in _brokerageAlgorithmSettings.SymbolToTestPerOrderType[OrderType.MarketOnClose])
             {
                 var aboveTheMarket = GetOrderPrice(symbol, aboveTheMarket: false);
                 LimitIfTouchedOrder(symbol, 1, aboveTheMarket, aboveTheMarket);
@@ -373,7 +432,7 @@ namespace QuantConnect.Algorithm.CSharp
         protected virtual void ExecuteComboMarketOrder(Slice slice)
         {
             OptionChain chain;
-            if (IsMarketOpen(OptionContract) && slice.OptionChains.TryGetValue(OptionContract.Canonical, out chain))
+            if (IsMarketOpen(_brokerageAlgorithmSettings.OptionContract) && slice.OptionChains.TryGetValue(_brokerageAlgorithmSettings.CanonicalOptionSymbol, out chain))
             {
                 var callContracts = chain.Where(contract => contract.Right == OptionRight.Call)
                     .GroupBy(x => x.Expiry)
@@ -401,7 +460,7 @@ namespace QuantConnect.Algorithm.CSharp
         protected virtual void ExecuteComboLimitOrder(Slice slice)
         {
             OptionChain chain;
-            if (IsMarketOpen(OptionContract) && slice.OptionChains.TryGetValue(OptionContract.Canonical, out chain))
+            if (IsMarketOpen(_brokerageAlgorithmSettings.OptionContract) && slice.OptionChains.TryGetValue(_brokerageAlgorithmSettings.CanonicalOptionSymbol, out chain))
             {
                 var callContracts = chain.Where(contract => contract.Right == OptionRight.Call)
                     .GroupBy(x => x.Expiry)
@@ -429,7 +488,7 @@ namespace QuantConnect.Algorithm.CSharp
         protected virtual void ExecuteComboLegLimitOrder(Slice slice)
         {
             OptionChain chain;
-            if (IsMarketOpen(OptionContract) && slice.OptionChains.TryGetValue(OptionContract.Canonical, out chain))
+            if (IsMarketOpen(_brokerageAlgorithmSettings.OptionContract) && slice.OptionChains.TryGetValue(_brokerageAlgorithmSettings.CanonicalOptionSymbol, out chain))
             {
                 var callContracts = chain.Where(contract => contract.Right == OptionRight.Call)
                     .GroupBy(x => x.Expiry)
@@ -457,7 +516,7 @@ namespace QuantConnect.Algorithm.CSharp
         protected virtual void ExecuteTrailingStopOrders()
         {
             Debug($"{Time}: Sending TrailingStop orders");
-            foreach (var symbol in SymbolToTestPerOrderType[OrderType.TrailingStop])
+            foreach (var symbol in _brokerageAlgorithmSettings.SymbolToTestPerOrderType[OrderType.TrailingStop])
             {
                 TrailingStopOrder(symbol, 1, 0.1m, true);
             }
