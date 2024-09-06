@@ -66,6 +66,8 @@ namespace QuantConnect.Lean.Engine.DataFeeds
             _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*", 0.8));
             _client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0");
             _client.DefaultRequestHeaders.AcceptLanguage.Add(new StringWithQualityHeaderValue("en-US", 0.5));
+            _client.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
+            _client.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("deflate"));
         }
 
         /// <summary>
@@ -146,6 +148,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
 
         private IEnumerable<Symbol> GetFutureOptionContractList(Symbol futureContractSymbol, DateTime date)
         {
+            HttpRequestMessage? requestMessage = default;
             var symbols = new List<Symbol>();
             var retries = 0;
             var maxRetries = 5;
@@ -162,6 +165,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
                     var productResponse = _client.GetAsync(CMEProductSlateURL.Replace(CMESymbolReplace, futureContractSymbol.ID.Symbol))
                         .SynchronouslyAwaitTaskResult();
 
+                    requestMessage = productResponse.RequestMessage;
                     productResponse.EnsureSuccessStatusCode();
 
                     var productResults = JsonConvert.DeserializeObject<CMEProductSlateV2ListResponse>(productResponse.Content
@@ -276,6 +280,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
                     if (retries != maxRetries)
                     {
                         Log.Error(err, $"Failed to retrieve futures options chain from CME, retrying ({retries} / {maxRetries})");
+                        Log.Error($"HTTP request: {requestMessage}");
                         continue;
                     }
 
