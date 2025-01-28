@@ -87,6 +87,8 @@ namespace QuantConnect
         /// </summary>
         private static readonly ZoneLocalMappingResolver _mappingResolver = Resolvers.CreateMappingResolver(Resolvers.ReturnLater, Resolvers.ReturnStartOfIntervalAfter);
 
+        public static Language Language { get; set; }
+
         /// <summary>
         /// The offset span from the market close to liquidate or exercise a security on the delisting date
         /// </summary>
@@ -714,6 +716,34 @@ namespace QuantConnect
 
                 return instance.GetPythonMethod(name);
             }
+        }
+
+        public static string HandlePythonMessages(this string message)
+        {
+            if (Extensions.Language != Language.Python)
+                return message;
+
+            string ConvertToSnakeCase(string input) =>
+                Regex.Replace(input, "([A-Z])", "_$1").TrimStart('_').ToLower();
+
+            // Convert method names (e.g., "MethodName()") to snake_case
+            var patternMethods = @"([A-Z][a-zA-Z]*)\(\)";
+            message = Regex.Replace(message, patternMethods, match =>
+            {
+                var methodName = match.Groups[1].Value;
+                return $"{ConvertToSnakeCase(methodName)}()";
+            });
+
+            // Convert attributes/properties (e.g., "Class.PropertyName") to snake_case
+            var patternAttributes = @"([A-Z][a-zA-Z]*)\.([A-Z][a-zA-Z]*)";
+            message = Regex.Replace(message, patternAttributes, match =>
+            {
+                var className = ConvertToSnakeCase(match.Groups[1].Value);
+                var propertyName = ConvertToSnakeCase(match.Groups[2].Value).ToUpper();
+                return $"{className}.{propertyName}";
+            });
+
+            return message;
         }
 
         /// <summary>

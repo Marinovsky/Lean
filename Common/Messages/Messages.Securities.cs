@@ -109,9 +109,8 @@ namespace QuantConnect
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static string TargetOrderMarginNotAboveMinimum()
             {
-                var settingsMinimumOrderMarginPortfolioPercentage = _languageIsCSharp ? "Settings.MinimumOrderMarginPortfolioPercentage" : "settings.minimum_order_margin_portfolio_percentage";
                 return "Warning: Portfolio rebalance result ignored as it resulted in a single share trade recommendation which can generate high fees." +
-                    $" To disable minimum order size checks please set {settingsMinimumOrderMarginPortfolioPercentage} = 0.";
+                    $" To disable minimum order size checks please set Settings.MinimumOrderMarginPortfolioPercentage = 0.".HandlePythonMessages();
             }
 
             /// <summary>
@@ -133,13 +132,12 @@ namespace QuantConnect
             public static string FailedToConvergeOnTheTargetMargin(GetMaximumOrderQuantityForTargetBuyingPowerParameters parameters,
                 decimal signedTargetFinalMarginValue, decimal orderFees)
             {
-                var getMaximumOrderQuantityForTargetBuyingPower = _languageIsCSharp ? "GetMaximumOrderQuantityForTargetBuyingPower" : "get_maximum_order_quantity_for_target_buying_power";
-                return Invariant($@"{getMaximumOrderQuantityForTargetBuyingPower} failed to converge on the target margin: {
+                return Invariant($@"GetMaximumOrderQuantityForTargetBuyingPower() failed to converge on the target margin: {
                     signedTargetFinalMarginValue}; the following information can be used to reproduce the issue. Total Portfolio Cash: {
                     parameters.Portfolio.Cash}; Security : {parameters.Security.Symbol.ID}; Price : {parameters.Security.Close}; Leverage: {
                     parameters.Security.Leverage}; Order Fee: {orderFees}; Lot Size: {
                     parameters.Security.SymbolProperties.LotSize}; Current Holdings: {parameters.Security.Holdings.Quantity} @ {
-                    parameters.Security.Holdings.AveragePrice}; Target Percentage: %{parameters.TargetBuyingPower * 100};");
+                    parameters.Security.Holdings.AveragePrice}; Target Percentage: %{parameters.TargetBuyingPower * 100};").HandlePythonMessages();
             }
 
             /// <summary>
@@ -442,10 +440,9 @@ namespace QuantConnect
             public static string FailedToConvergeOnTargetOrderValue(decimal targetOrderValue, decimal currentOrderValue, decimal orderQuantity,
                 decimal orderFees, Securities.Security security)
             {
-                var getMaximumOrderQuantityForTargetBuyingPower = _languageIsCSharp ? "GetMaximumOrderQuantityForTargetBuyingPower" : "get_maximum_order_quantity_for_target_buying_power";
-                return Invariant($@"{getMaximumOrderQuantityForTargetBuyingPower} failed to converge to target order value {
+                return Invariant($@"GetMaximumOrderQuantityForTargetBuyingPower() failed to converge to target order value {
                     targetOrderValue}. Current order value is {currentOrderValue}. Order quantity {orderQuantity}. Lot size is {
-                    security.SymbolProperties.LotSize}. Order fees {orderFees}. Security symbol {security.Symbol}");
+                    security.SymbolProperties.LotSize}. Order fees {orderFees}. Security symbol {security.Symbol}").HandlePythonMessages();
             }
         }
 
@@ -711,12 +708,12 @@ namespace QuantConnect
             /// <summary>
             /// String message saying: Security requires a valid SymbolProperties instance
             /// </summary>
-            public static string ValidSymbolPropertiesInstanceRequired = _languageIsCSharp ? "Security requires a valid SymbolProperties instance." : "Security requires a valid symbol_properties instance.";
+            public static string ValidSymbolPropertiesInstanceRequired = "Security requires a valid SymbolProperties instance.".HandlePythonMessages();
 
             /// <summary>
             /// String message saying: symbolProperties.QuoteCurrency must match the quoteCurrency.Symbol
             /// </summary>
-            public static string UnmatchingQuoteCurrencies = _languageIsCSharp ? "symbolProperties.QuoteCurrency must match the quoteCurrency.Symbol" : "symbol_properties.quote_currency must match the quote_currency.symbol";
+            public static string UnmatchingQuoteCurrencies = "SymbolProperties.QuoteCurrency must match the QuoteCurrency.Symbol".HandlePythonMessages();
 
             /// <summary>
             /// String message saying: Security.SetLocalTimeKeeper(LocalTimeKeeper) must be called in order to use the LocalTime property
@@ -826,8 +823,7 @@ namespace QuantConnect
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static string SymbolNotFoundInSecurities(QuantConnect.Symbol symbol)
             {
-                var securitiesContainsKey = _languageIsCSharp ? "Securities.ContainsKey" : "securities.contains_key";
-                return Invariant($@"This asset symbol ({symbol}) was not found in your security list. Please add this security or check it exists before using it with '{securitiesContainsKey}(""{QuantConnect.SymbolCache.GetTicker(symbol)}"")'");
+                return Invariant($@"This asset symbol ({symbol}) was not found in your security list. Please add this security or check it exists before using it with Securities.ContainsKey(""{QuantConnect.SymbolCache.GetTicker(symbol)}"")'").HandlePythonMessages();
             }
 
             /// <summary>
@@ -866,17 +862,15 @@ namespace QuantConnect
             /// Returns a string message saying the AccountCurrency cannot be changed after adding a Security and that the method
             /// SetAccountCurrency() should be moved before AddSecurity()
             /// </summary>
-            public static string CannotChangeAccountCurrencyAfterAddingSecurity = _languageIsCSharp ?
-                "Cannot change AccountCurrency after adding a Security. Please move SetAccountCurrency() before AddSecurity()." :
-                "Cannot change AccountCurrency after adding a Security. Please move set_account_currency() before add_security().";
+            public static string CannotChangeAccountCurrencyAfterAddingSecurity =
+                "Cannot change AccountCurrency after adding a Security. Please move SetAccountCurrency() before AddSecurity().".HandlePythonMessages();
 
             /// <summary>
             /// Returns a string message saying the AccountCurrency cannot be changed after setting cash and that the method
             /// SetAccountCurrency() should be moved before SetCash()
             /// </summary>
-            public static string CannotChangeAccountCurrencyAfterSettingCash = _languageIsCSharp ?
-                "Cannot change AccountCurrency after setting cash. Please move SetAccountCurrency() before SetCash()." :
-                "Cannot change AccountCurrency after setting cash. Please move set_account_currency() before set_cash().";
+            public static string CannotChangeAccountCurrencyAfterSettingCash =
+                "Cannot change AccountCurrency after setting cash. Please move SetAccountCurrency() before SetCash().".HandlePythonMessages();
 
             /// <summary>
             /// Returns a string message saying the AccountCurrency has already been set and that the new value for this property
@@ -940,9 +934,8 @@ namespace QuantConnect
             /// <summary>
             /// Returns a string message saying CancelOpenOrders operation is not allowed in Initialize or during warm up
             /// </summary>
-            public static string CancelOpenOrdersNotAllowedOnInitializeOrWarmUp = _languageIsCSharp ?
-                "This operation is not allowed in Initialize or during warm up: CancelOpenOrders. Please move this code to the OnWarmupFinished() method." :
-                "This operation is not allowed in initialize or during warm up: cancel_open_orders. Please move this code to the on_warmup_finished() method.";
+            public static string CancelOpenOrdersNotAllowedOnInitializeOrWarmUp =
+                "This operation is not allowed in Initialize or during warm up: CancelOpenOrders(). Please move this code to the OnWarmupFinished() method.".HandlePythonMessages();
 
             /// <summary>
             /// Returns a string message saying the order was canceled by the CancelOpenOrders() at the given time
@@ -950,8 +943,7 @@ namespace QuantConnect
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static string OrderCanceledByCancelOpenOrders(DateTime time)
             {
-                var cancelOpenOrders = _languageIsCSharp ? "CancelOpenOrders" : "cancel_open_orders";
-                return Invariant($"Canceled by {cancelOpenOrders}() at {time:o}");
+                return Invariant($"Canceled by CancelOpenOrders() at {time:o}").HandlePythonMessages();
             }
 
             /// <summary>
@@ -981,17 +973,17 @@ namespace QuantConnect
             /// <summary>
             /// String message saying the SymbolProperties LotSize can not be less than or equal to 0
             /// </summary>
-            public static string InvalidLotSize = _languageIsCSharp ? "SymbolProperties LotSize can not be less than or equal to 0" : "symbol_properties LOT_SIZE can not be less than or equal to 0";
+            public static string InvalidLotSize = "SymbolProperties.LotSize can not be less than or equal to 0".HandlePythonMessages();
 
             /// <summary>
             /// String message saying the SymbolProperties PriceMagnifier can not be less than or equal to 0
             /// </summary>
-            public static string InvalidPriceMagnifier = _languageIsCSharp ? "SymbolProprties PriceMagnifier can not be less than or equal to 0" : "symbol_properties PRICE_MAGNIFIER can not be less than or equal to 0";
+            public static string InvalidPriceMagnifier = "SymbolProprties.PriceMagnifier can not be less than or equal to 0".HandlePythonMessages();
 
             /// <summary>
             /// String message saying the SymbolProperties StrikeMultiplier can not be less than or equal to 0
             /// </summary>
-            public static string InvalidStrikeMultiplier = _languageIsCSharp ? "SymbolProperties StrikeMultiplier can not be less than or equal to 0" : "symbol_properties STRIKE_MULTIPLIER can not be less than or equal to 0";
+            public static string InvalidStrikeMultiplier = "SymbolProperties.StrikeMultiplier can not be less than or equal to 0".HandlePythonMessages();
 
             /// <summary>
             /// Parses a given SymbolProperties object into a string message

@@ -2059,6 +2059,21 @@ def select_symbol(fundamental):
             Assert.IsTrue(csvLine.TryGetDecimalFromCsv(index, out var result));
             Assert.AreEqual(expectedValue, result);
         }
+        [TestCase("SymbolProperties.LotSize can not be less than or equal to 0",
+            "symbol_properties.LOT_SIZE can not be less than or equal to 0")]
+        [TestCase("To disable minimum order size checks please set Settings.MinimumOrderMarginPortfolioPercentage",
+            "To disable minimum order size checks please set settings.MINIMUM_ORDER_MARGIN_PORTFOLIO_PERCENTAGE")]
+        [TestCase("This operation is not allowed in Initialize or during warm up: OrderRequest.Submit Please move this code to the OnWarmupFinished() method.",
+            "This operation is not allowed in Initialize or during warm up: order_request.SUBMIT Please move this code to the on_warmup_finished() method.")]
+        [TestCase("You haven't requested SPX data. Add this with AddSecurity() in the Initialize() Method.",
+            "You haven't requested SPX data. Add this with add_security() in the initialize() Method.")]
+        public void HandlePythonMessagesWorksAsExpected(string message, string expected)
+        {
+            Extensions.Language = Language.Python;
+            Assert.AreEqual(expected, message.HandlePythonMessages());
+            Extensions.Language = Language.CSharp;
+            Assert.AreEqual(message, message.HandlePythonMessages());
+        }
 
         private PyObject ConvertToPyObject(object value)
         {
