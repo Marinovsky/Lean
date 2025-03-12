@@ -29,7 +29,7 @@ jobs:
           shell: bash
           run: |
             # Test
-            echo if [[ $GITHUB_REF = refs/tags/* && $(git branch --contains $GITHUB_REF | grep master) ]]; then echo "THIS IS A TEST MESSAGE!";
+            if [[ $GITHUB_REF = refs/tags/* && $(git branch --contains $GITHUB_REF | grep master) ]]; then echo "THIS IS A TEST MESSAGE!"; else echo "THIS IS ANOTHER TEST MESSAGE";
             # Build
             dotnet build /p:Configuration=Release /v:quiet /p:WarningLevel=1 QuantConnect.Lean.sln && \
             # Run Tests
