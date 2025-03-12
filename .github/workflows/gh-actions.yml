@@ -28,6 +28,8 @@ jobs:
           options: --workdir /__w/Lean/Lean -v /home/runner/work:/__w -e GITHUB_REF=${{ github.ref }} -e PYPI_API_TOKEN=${{ secrets.PYPI_API_TOKEN }} -e ADDITIONAL_STUBS_REPOS=${{ secrets.ADDITIONAL_STUBS_REPOS }} -e QC_GIT_TOKEN=${{ secrets.QC_GIT_TOKEN }}
           shell: bash
           run: |
+            # Test
+            echo if [[ $GITHUB_REF = refs/tags/* && $(git branch --contains $GITHUB_REF | grep master) ]]; then echo "THIS IS A TEST MESSAGE!";
             # Build
             dotnet build /p:Configuration=Release /v:quiet /p:WarningLevel=1 QuantConnect.Lean.sln && \
             # Run Tests
