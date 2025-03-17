@@ -17,7 +17,7 @@ jobs:
           fetch-depth: 0  # Ensures we fetch all HISTORY
 
       - name: Get Last Commit of the Current Tag and the master branch
-        run: taglastcommit=$(git rev-parse HEAD) && masterlastcommit=$(git rev-parse origin/master) && if [ "$taglastcommit" = "$masterlastcommit" ]; then echo "THIS IS A TAG FROM MASTER"; else echo "THIS IS NOT A TAG FROM MASTER"; fi
+        run: taglastcommit=$(git rev-parse HEAD) && masterlastcommit=$(git rev-parse origin/master) && if [ $GITHUB_REF = refs/tags/* && "$taglastcommit" = "$masterlastcommit" ]; then echo "THIS IS A TAG FROM MASTER"; else echo "THIS IS NOT A TAG FROM MASTER"; fi
 
       - name: Checkout
         uses: actions/checkout@v2
